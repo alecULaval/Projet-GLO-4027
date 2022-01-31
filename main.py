@@ -43,7 +43,7 @@ for date in datesDuSondage:
 canadians1979 = (data[(data["cps19_yob"] == 1979) | (data["cps19_citizenship"] == "Permanent resident")]
          [["cps19_citizenship", "cps19_yob"]])
 
-print(len(canadians1979))
+#print(len(canadians1979))
 
 person101 = data.iloc[101][["cps19_citizenship", "cps19_yob"]]
 #print(person101)
