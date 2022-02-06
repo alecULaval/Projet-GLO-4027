@@ -8,6 +8,74 @@ columns = data.columns
 
 nbrGivenInAnswer = 0
 
+
+affinitePolitique = data['cps19_fed_id']
+confidenceAffinete = data["cps19_fed_id_str"]
+actualVote = data["cps19_votechoice"]
+print(affinitePolitique)
+
+nbrSame = 0
+nbrDifferent =0
+notConfident =0
+semiConfident = 0
+confident = 0
+
+notConfidentIfSame =0
+semiConfidentIfSame = 0
+confidentIfSame = 0
+
+for i in range(0, len(affinitePolitique)):
+
+    if( affinitePolitique[i] == actualVote[i] or (affinitePolitique[i] == "Liberal" and actualVote[i] =="Liberal Party")
+            or (affinitePolitique[i] == "Conservative" and actualVote[i] =="Conservative Party")
+            or (affinitePolitique[i] == "Green" and actualVote[i] =="Green Party")):
+        nbrSame +=1
+        if(confidenceAffinete[i] == "Not very strongly"):
+            notConfidentIfSame +=1
+        elif(confidenceAffinete[i] == "Fairly strongly"):
+            semiConfidentIfSame +=1
+        elif (confidenceAffinete[i] == "Very strongly"):
+            confidentIfSame +=1
+    elif(not pd.isna(actualVote[i]) and actualVote[i]!= "Don't know/ Prefer not to answer"
+        and affinitePolitique[i]!= "Don't know/ Prefer not to answer"
+        and affinitePolitique[i]!= "None of these"
+        and actualVote[i] != "Another party (please specify)"):
+        nbrDifferent += 1
+
+        if(confidenceAffinete[i] == "Not very strongly"):
+            notConfident +=1
+        elif(confidenceAffinete[i] == "Fairly strongly"):
+            semiConfident +=1
+        elif (confidenceAffinete[i] == "Very strongly"):
+            confident +=1
+
+        print(
+            "Affinite = {affinitePolitique} , vrai vote =  {voteChoice}, Confiance = {confiance}".format(affinitePolitique=affinitePolitique[i], voteChoice=actualVote[i], confiance = confidenceAffinete[i]))
+
+#Probleme 1: Beaucoup de gens se sont associé au Liberal mais ont voté NPD, vice-versa (confusion NPD-Lberaux). Le NPD fait chier, ils touchent un peu a tout.
+#Probleme 2: Vote strategique
+
+pourcentageNonConfient = notConfident / (notConfident +semiConfident +confident)*100
+pourcentageSemiConfient = semiConfident / (notConfident +semiConfident +confident)*100
+pourcentageConfient = confident / (notConfident +semiConfident +confident)*100
+
+pourcentageNonConfientIfSame = notConfidentIfSame / (notConfidentIfSame +semiConfidentIfSame +confidentIfSame)*100
+pourcentageSemiConfientIfSame = semiConfidentIfSame / (notConfidentIfSame +semiConfidentIfSame +confidentIfSame)*100
+pourcentageConfientIfSame = confidentIfSame / (notConfidentIfSame +semiConfidentIfSame +confidentIfSame)*100
+
+
+print("Parmi ceux qui avaient un vote different de leur affinite, {pourcentageNonConfient} % ne sont pas confiants, "
+      "{pourcentageSemiConfient} % sont relativement confiants et {pourcentageConfient} % sont confiants".format(
+    pourcentageNonConfient=pourcentageNonConfient, pourcentageSemiConfient=pourcentageSemiConfient, pourcentageConfient = pourcentageConfient))
+
+print("Parmi ceux qui avaient LE MEME VOTE que celui de leur affinite, {pourcentageNonConfientIfSame} % ne sont pas confiants, "
+      "{pourcentageSemiConfientIfSame} % sont relativement confiants et {pourcentageConfientIfSame} % sont confiants".format(
+    pourcentageNonConfientIfSame=pourcentageNonConfientIfSame, pourcentageSemiConfientIfSame=pourcentageSemiConfientIfSame, pourcentageConfientIfSame = pourcentageConfientIfSame))
+
+sucessRate = nbrSame /(nbrSame + nbrDifferent)*100
+print(nbrSame + nbrDifferent)
+print(sucessRate)
+"""
 missingValuesByColumns = []
 
 #nbrQuestions = 0
@@ -73,7 +141,7 @@ for text in dataOther:
 
 #print(nbrCompleteAttribute)
 
-"""
+
 votersNumber = data['Unnamed: 0']
 voteChoices = data['cps19_votechoice']
 
