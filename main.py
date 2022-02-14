@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-data = pd.read_csv("donnees.csv")
+data = pd.read_csv("CES19.csv")
 columns = data.columns
 
 nbrGivenInAnswer = 0
@@ -23,6 +23,7 @@ confident = 0
 notConfidentIfSame =0
 semiConfidentIfSame = 0
 confidentIfSame = 0
+
 
 for i in range(0, len(affinitePolitique)):
 
