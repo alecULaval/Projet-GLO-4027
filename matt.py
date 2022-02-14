@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
+from sklearn.cluster import KMeans
 import os
 
 print(pd.__version__)
@@ -115,7 +116,7 @@ def score_contingency(contingency, data, column_name):
     return score
 
 
-def get_best_questions(data):
+def get_best_questions(data, getMin=False):
     test_data = data[data["isUnknown"] == False]
     total_responses = test_data["Unnamed: 0"].count()
     min_responses = total_responses/1000
@@ -147,12 +148,12 @@ def get_best_questions(data):
                 results = results.append(pd.DataFrame([[colonne, answer, vote, score, total]],
                                                       columns=['column', 'answer', 'vote', 'score', 'size']))
 
-
-                votersmin = contingency[answer].min()
-                votemin = contingency[answer].idxmin()
-                scoremin = votersmin / total
-                results = results.append(pd.DataFrame([[colonne, answer, votemin, scoremin, total]],
-                                                      columns=['column', 'answer', 'vote', 'score', 'size']))
+                if getMin:
+                    votersmin = contingency[answer].min()
+                    votemin = contingency[answer].idxmin()
+                    scoremin = votersmin / total
+                    results = results.append(pd.DataFrame([[colonne, answer, votemin, scoremin, total]],
+                                                          columns=['column', 'answer', 'vote', 'score', 'size']))
 
         except:
             print(f"Colonne {colonne} fail")
@@ -222,6 +223,80 @@ def normalize_int(data, column_name):
     data[column_name] = column
     return data
 
+
+def plotStackedHist(classes, labels, data, X, labelNames, ylabel='', title=''):
+
+    voters = np.zeros((len(classes), len(labels)))
+    for i, label in enumerate(labels):
+        for j, votingClass in enumerate(classes):
+            count = data[(X == label) & (data["vote"] == votingClass)].count()[0]
+            voters[j, i] = count
+
+    fig, ax = plt.subplots()
+    bottom = voters[0] * 0
+    displayLabels = labelNames[:]
+    reduceLabels(displayLabels)
+    for i, classByLabel in enumerate(voters):
+        ax.bar(displayLabels, classByLabel, label=classes[i], bottom=bottom)
+        bottom = bottom + classByLabel
+
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.legend(framealpha=0.2)
+    plt.show()
+
+
+def reduceLabels(labels):
+    for i, label in enumerate(labels):
+        listOfWords = label.split()
+        newWord = ""
+        for word in listOfWords:
+            newWord = newWord + word[:8] + "\n"
+        labels[i] = newWord[:-1]
+
+def standardStackedHist(data, attribute):
+    attribute_vote = [attribute[:]]
+    attribute_vote.append("vote")
+    filteredData = data[pd.notnull(data[attribute])][attribute_vote]
+
+    y = filteredData["vote"]
+    y = y.to_numpy()
+    classes = np.unique(y)
+
+    X = filteredData[attribute]
+    X = X.to_numpy()
+    labels = np.unique(X)
+
+    plotStackedHist(classes, labels, filteredData, X, labels, ylabel='Nombre de répondants',
+                    title='Choix de vote: ' + attribute)
+
+
+def attributeClustering(data, attribute, n_clusters=9):
+    attribute_vote = [attribute[:]]
+    attribute_vote.append("vote")
+    filteredData = data[pd.notnull(data[attribute])][attribute_vote]
+
+    X = filteredData[attribute]
+    X = X.to_numpy()
+    y = filteredData["vote"]
+    y = y.to_numpy()
+    kmeans = KMeans(n_clusters=n_clusters).fit(X.reshape(-1, 1))
+    X2 = kmeans.predict(X.reshape(-1, 1))
+
+    labels = np.unique(X2)
+    labelNames = []
+    X_classes = np.array([i for i in range(101)])
+    X_predicted = kmeans.predict(X_classes.reshape(-1, 1))
+    for label in labels:
+        minValue = min(X_classes[X_predicted == label])
+        maxValue = max(X_classes[X_predicted == label])
+        labelName = "[" + str(minValue) + ",\n" + str(maxValue) + "]"
+        labelNames.append(labelName)
+
+    classes = np.unique(y)
+    plotStackedHist(classes, labels, filteredData, X2, labelNames, ylabel='Nombre de répondants', title='Clustering: ' + attribute)
+
+
 def main():
     data = pd.read_csv("CES19.csv")
     # questionnaire(data)
@@ -255,10 +330,70 @@ def main():
     data = clean_boolean(data, ["cps19_lead_cares_113", "cps19_lead_cares_114", "cps19_lead_cares_115", "cps19_lead_cares_116",
                                 "cps19_lead_cares_117", "cps19_lead_cares_118", "cps19_lead_cares_119", "cps19_lead_cares_120"])
     #exploration(data, verbose=False)
-    get_best_questions(data)
+    #get_best_questions(data)
+
+    train_data = data[pd.notnull(data["vote"])]
+    standardStackedHist(train_data, "cps19_issue_handle_1")
+
+    attribut = ["cps19_party_rating_23", "cps19_party_rating_24", "cps19_party_rating_25", "cps19_party_rating_26",
+                "cps19_party_rating_27", "cps19_party_rating_28", "cps19_lead_rating_23", "cps19_lead_rating_24",
+                "cps19_lead_rating_25", "cps19_lead_rating_26", "cps19_lead_rating_27", "cps19_lead_rating_28",
+                "cps19_cand_rating_23", "cps19_cand_rating_24", "cps19_cand_rating_25", "cps19_cand_rating_26",
+                "cps19_cand_rating_27", "cps19_cand_rating_28"]
+    attribut = ["cps19_lead_int_113", "cps19_lead_int_114", "cps19_lead_int_115", "cps19_lead_int_116",
+                "cps19_lead_int_117", "cps19_lead_int_118", "cps19_lead_int_119", "cps19_lead_int_120",
+                "cps19_lead_strong_113", "cps19_lead_strong_114", "cps19_lead_strong_115",
+                "cps19_lead_strong_116", "cps19_lead_strong_117", "cps19_lead_strong_118",
+                "cps19_lead_strong_119", "cps19_lead_strong_120",
+                "cps19_lead_trust_113", "cps19_lead_trust_114", "cps19_lead_trust_115", "cps19_lead_trust_116",
+                "cps19_lead_trust_117", "cps19_lead_trust_118", "cps19_lead_trust_119", "cps19_lead_trust_120",
+                "cps19_lead_cares_113", "cps19_lead_cares_114", "cps19_lead_cares_115", "cps19_lead_cares_116",
+                "cps19_lead_cares_117", "cps19_lead_cares_118", "cps19_lead_cares_119", "cps19_lead_cares_120"]
+
+    attribut = ["cps19_interest_gen_1"]
+    attribut_vote = attribut[:]
+    attribut_vote.append("vote")
+
+    completeNan = False
+    if completeNan:
+        test = pd.notnull(data["vote"])
+        testatt = test & False
+        for att in attribut:
+            testatt = testatt | pd.notnull(data[att])
+        test = test & testatt
+
+        extractedData = data[test][attribut_vote]
+        extractedData = extractedData.fillna(0)
+    else:
+        test = pd.notnull(data["vote"])
+        for att in attribut:
+            test = test & pd.notnull(data[att])
+        extractedData = data[test][attribut_vote]
+
+    X = extractedData[attribut]
+    X = X.to_numpy()
+    y = extractedData["vote"]
+    y = y.to_numpy()
+    kmeans = KMeans(n_clusters=9).fit(X)
+    X2 = kmeans.predict(X)
+
+    labels = np.unique(X2)
+    labelNames = labels
+    #labelNames = []
+    #X_classes = np.array([i for i in range(101)])
+    #X_predicted = kmeans.predict(X_classes.reshape(-1, 1))
+    #for label in labels:
+    #    minValue = min(X_classes[X_predicted == label])
+    #    maxValue = max(X_classes[X_predicted == label])
+    #    labelName = "[" + str(minValue) + ",\n" + str(maxValue) + "]"
+    #    labelNames.append(labelName)
+
+
+    classes = np.unique(y)
+
+    plotStackedHist(classes, labels, extractedData, X2, labelNames, ylabel='Répondants par groupe', title='Clustering')
 
     print("Break Here")
-
 
 if __name__ == '__main__':
     main()
