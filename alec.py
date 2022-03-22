@@ -21,6 +21,7 @@ def findFinalVotes(actualVotes):
     realVote = pd.NA
     count = 0
     for i in range(0, len(actualVotes)):
+
         if not pd.isna(actualVotes.iloc[i]['cps19_votechoice']):
             realVote = actualVotes.iloc[i]['cps19_votechoice']
         elif not pd.isna(actualVotes.iloc[i]['cps19_votechoice_pr']):
@@ -32,8 +33,10 @@ def findFinalVotes(actualVotes):
         elif not pd.isna(actualVotes.iloc[i]['cps19_v_advance']):
             realVote = actualVotes.iloc[i]['cps19_v_advance']
         else:
+            #print(actualVotes.iloc[i]['cps19_votechoice'], actualVotes.iloc[i]['cps19_votechoice_pr'], actualVotes.iloc[i]['cps19_vote_unlikely'],actualVotes.iloc[i]['cps19_vote_unlike_pr'], actualVotes.iloc[i]['cps19_v_advance'])
+            #print(i, actualVotes.iloc[i]['Unnamed: 0'], actualVotes.iloc[i]['Unnamed: 0'])
             count +=1
-        actualVotes['finalVote'][i] = realVote
+        actualVotes.iloc[i]['finalVote'] = realVote
     return actualVotes
 
 def findCorrelationWithQuebecProvince(provinceAnswers, finalVotes):
@@ -43,18 +46,18 @@ def findCorrelationWithQuebecProvince(provinceAnswers, finalVotes):
     blocVoterNotQuebecResidentCount =0
     for i in range(0, len(provinceAnswers)):
         #print(finalVotes.iloc[i]['finalVote'])
-        if not pd.isna(provinceAnswers.iloc[i]['pes19_province']):
+        if not pd.isna(provinceAnswers.iloc[i]['cps19_province']):
             provinceAnsweredCount +=1
 
-        if provinceAnswers.iloc[i]['pes19_province'] == 'Quebec':
+        if provinceAnswers.iloc[i]['cps19_province'] == 'Quebec':
             quebecResidentTotalCount +=1
 
-        if provinceAnswers.iloc[i]['pes19_province'] == 'Quebec' and finalVotes.iloc[i]['finalVote'] == "Bloc Qu<e9>b<e9>cois":
+        if provinceAnswers.iloc[i]['cps19_province'] == 'Quebec' and finalVotes.iloc[i]['finalVote'] == "Bloc Qu<e9>b<e9>cois":
             quebecResidentVotedForBlocCount +=1
 
-        if provinceAnswers.iloc[i]['pes19_province'] != 'Quebec' and finalVotes.iloc[i]['finalVote'] == "Bloc Qu<e9>b<e9>cois":
-            if not pd.isna(provinceAnswers.iloc[i]['pes19_province']):
-                #print( provinceAnswers.iloc[i]['pes19_province'] , finalVotes.iloc[i]['finalVote'])
+        if provinceAnswers.iloc[i]['cps19_province'] != 'Quebec' and finalVotes.iloc[i]['finalVote'] == "Bloc Qu<e9>b<e9>cois":
+            if not pd.isna(provinceAnswers.iloc[i]['cps19_province']):
+                #print(provinceAnswers.iloc[i]['Unnamed: 0'], provinceAnswers.iloc[i]['pes19_province'] , finalVotes.iloc[i]['finalVote'])
                 blocVoterNotQuebecResidentCount +=1
 
     return [provinceAnsweredCount, quebecResidentTotalCount, quebecResidentVotedForBlocCount, blocVoterNotQuebecResidentCount]
@@ -64,23 +67,17 @@ def findCorrelationForBiggestIssue(bestAdressesIssue, finalVotes):
     bestAdressesIssueSameForVoteCount = 0
     bestAdressesIssueDifferentForVoteCount = 0
     for i in range(0, len(bestAdressesIssue)):
-        if not pd.isna(bestAdressesIssue.iloc[i]['cps19_imp_iss_party']) and not pd.isna(finalVotes.iloc[i]['finalVote'])\
-                and finalVotes.iloc[i]['finalVote'] != "Don't know/ Prefer not to answer"\
-                and bestAdressesIssue.iloc[i]['cps19_imp_iss_party'] != "Don't know/ Prefer not to answer":
+        if not pd.isna(bestAdressesIssue.iloc[i]['cps19_imp_iss_party']) and not pd.isna(finalVotes.iloc[i]['finalVote']):
             bestAdressesPartyTotalCount += 1
 
         if bestAdressesIssue.iloc[i]['cps19_imp_iss_party'] == finalVotes.iloc[i]['finalVote']\
-                and (not pd.isna(bestAdressesIssue.iloc[i]['cps19_imp_iss_party']) and not pd.isna(finalVotes.iloc[i]['finalVote'])
-        and finalVotes.iloc[i]['finalVote'] != "Don't know/ Prefer not to answer"
-        and bestAdressesIssue.iloc[i]['cps19_imp_iss_party'] != "Don't know/ Prefer not to answer"):
+                and (not pd.isna(bestAdressesIssue.iloc[i]['cps19_imp_iss_party']) and not pd.isna(finalVotes.iloc[i]['finalVote'])):
                 #print( "Best adresses: {bestAdresses}  Final Vote: {finalVote}".format(
                         #bestAdresses=bestAdressesIssue.iloc[i]['cps19_imp_iss_party'], finalVote=finalVotes.iloc[i]['finalVote']))
                 bestAdressesIssueSameForVoteCount +=1
 
         if bestAdressesIssue.iloc[i]['cps19_imp_iss_party'] != finalVotes.iloc[i]['finalVote']\
-                and (not pd.isna(bestAdressesIssue.iloc[i]['cps19_imp_iss_party']) and not pd.isna(finalVotes.iloc[i]['finalVote'])
-        and finalVotes.iloc[i]['finalVote'] != "Don't know/ Prefer not to answer"
-        and bestAdressesIssue.iloc[i]['cps19_imp_iss_party'] != "Don't know/ Prefer not to answer"):
+                and (not pd.isna(bestAdressesIssue.iloc[i]['cps19_imp_iss_party']) and not pd.isna(finalVotes.iloc[i]['finalVote'])):
 
                 #print( "Best adresses: {bestAdresses}  Final Vote: {finalVote}".format(
                         #bestAdresses=bestAdressesIssue.iloc[i]['cps19_imp_iss_party'], finalVote=finalVotes.iloc[i]['finalVote']))
@@ -111,8 +108,7 @@ def findCorrelationMostWantedOutcome(desiredOutcome, finalVotes):
 
 
         if (desiredOutcome.iloc[i]['cps19_outcome_most'] == "Liberal majority" or desiredOutcome.iloc[i]['cps19_outcome_most'] == "Liberal minority")\
-                and finalVotes.iloc[i]['finalVote'] != "Liberal Party"\
-                and finalVotes.iloc[i]['finalVote'] != "Don't know/ Prefer not to answer":
+                and finalVotes.iloc[i]['finalVote'] != "Liberal Party":
             desiredOutcomeDifferentThenVoteLiberals +=1
 
         if (desiredOutcome.iloc[i]['cps19_outcome_most'] == "Conservative majority" or desiredOutcome.iloc[i]['cps19_outcome_most'] == "Conservative minority")\
@@ -123,8 +119,7 @@ def findCorrelationMostWantedOutcome(desiredOutcome, finalVotes):
 
 
         if (desiredOutcome.iloc[i]['cps19_outcome_most'] == "Conservative majority" or desiredOutcome.iloc[i]['cps19_outcome_most'] == "Conservative minority")\
-                and finalVotes.iloc[i]['finalVote'] != "Conservative Party"\
-                and finalVotes.iloc[i]['finalVote'] != "Don't know/ Prefer not to answer":
+                and finalVotes.iloc[i]['finalVote'] != "Conservative Party":
             desiredOutcomeDifferentThenVoteConservative +=1
 
         if (desiredOutcome.iloc[i]['cps19_outcome_most'] == "NDP minority" or desiredOutcome.iloc[i]['cps19_outcome_most'] == "NDP majority")\
@@ -135,8 +130,7 @@ def findCorrelationMostWantedOutcome(desiredOutcome, finalVotes):
 
 
         if (desiredOutcome.iloc[i]['cps19_outcome_most'] == "NDP minority" or desiredOutcome.iloc[i]['cps19_outcome_most'] == "NDP majority")\
-                and finalVotes.iloc[i]['finalVote'] != "ndp"\
-                and finalVotes.iloc[i]['finalVote'] != "Don't know/ Prefer not to answer":
+                and finalVotes.iloc[i]['finalVote'] != "ndp":
             desiredOutcomeDifferentThenVoteNDP +=1
 
     return [bestOutcomeTotalCount,desiredOutcomeSameThenVoteLiberals, desiredOutcomeDifferentThenVoteLiberals,
@@ -172,10 +166,7 @@ def findCorrelationAffiliationPgilosophique(affinitePolitique, confidenceAffinet
             if not pd.isna(affinitePolitique.iloc[i]['cps19_fed_id']) and not pd.isna(finalVotes.iloc[i]['finalVote'])\
                     and affinitePolitique.iloc[i]['cps19_fed_id'] != "None of these" \
                     and affinitePolitique.iloc[i]['cps19_fed_id'] != "Don't know/ Prefer not to answer" \
-                    and affinitePolitique.iloc[i]['cps19_fed_id'] != "Another party (please specify)" \
-                    and finalVotes.iloc[i]['finalVote'] != "None of these" \
-                    and finalVotes.iloc[i]['finalVote'] != "Don't know/ Prefer not to answer" \
-                    and finalVotes.iloc[i]['finalVote'] != "Another party (please specify)" :
+                    and affinitePolitique.iloc[i]['cps19_fed_id'] != "Another party (please specify)" :
                 nbrDifferent += 1
 
                 if (confidenceAffinete.iloc[i]['cps19_fed_id_str'] == "Not very strongly"):
@@ -185,9 +176,9 @@ def findCorrelationAffiliationPgilosophique(affinitePolitique, confidenceAffinet
                 elif (confidenceAffinete.iloc[i]['cps19_fed_id_str'] == "Very strongly"):
                     confident += 1
 
-                print(
-                    "Affinite = {affinitePolitique} , vrai vote =  {voteChoice}, Confiance = {confiance}".format(
-                        affinitePolitique=affinitePolitique.iloc[i]['cps19_fed_id'], voteChoice=finalVotes.iloc[i]['finalVote'], confiance=confidenceAffinete.iloc[i]['cps19_fed_id_str']))
+                #print(
+                    #"Affinite = {affinitePolitique} , vrai vote =  {voteChoice}, Confiance = {confiance}".format(
+                        #affinitePolitique=affinitePolitique.iloc[i]['cps19_fed_id'], voteChoice=finalVotes.iloc[i]['finalVote'], confiance=confidenceAffinete.iloc[i]['cps19_fed_id_str']))
 
     pourcentageNonConfient = notConfident / (notConfident + semiConfident + confident) * 100
     pourcentageSemiConfient = semiConfident / (notConfident + semiConfident + confident) * 100
@@ -238,33 +229,14 @@ def findCorrelationWithDonations(partyMember, finalVotes):
 
         if not pd.isna(partyMember.iloc[i]['cps19_fed_member']) and not pd.isna(finalVotes.iloc[i]['finalVote']) \
                 and partyMember.iloc[i]['cps19_fed_member'] != finalVotes.iloc[i]['finalVote']:
-            print( "Gave to: {gaveParty}  Final Vote: {finalVote}".format(
-            gaveParty=partyMember.iloc[i]['cps19_fed_member'], finalVote=finalVotes.iloc[i]['finalVote']))
+            #print( "Gave to: {gaveParty}  Final Vote: {finalVote}".format(
+            #gaveParty=partyMember.iloc[i]['cps19_fed_member'], finalVote=finalVotes.iloc[i]['finalVote']))
             totalGaveToDifferentThanVote += 1
 
     return [totalCount, totalGaveToSameThanVote, totalGaveToDifferentThanVote]
 
 
-
-def main():
-    desiredOutcome = data[['Unnamed: 0', 'cps19_outcome_most']]
-    provinceAnswers = data[['Unnamed: 0', 'pes19_province']]
-    bestAdressesIssue = data[['Unnamed: 0', 'cps19_imp_iss_party']]
-    affinitePolitique = data[['Unnamed: 0', 'cps19_fed_id']]
-    confidenceAffinete = data[['Unnamed: 0', "cps19_fed_id_str"]]
-    partyMember = data[['Unnamed: 0', "cps19_fed_member"]]
-    currentTrudeauSatisfaction = data[['Unnamed: 0', "cps19_fed_gov_sat"]]
-
-    actualVotes = data[['Unnamed: 0', "cps19_votechoice", "cps19_votechoice_pr", "cps19_vote_unlikely", "cps19_vote_unlike_pr", "cps19_v_advance", 'finalVote']]
-
-    finalVotes = findFinalVotes(actualVotes)[['Unnamed: 0', 'finalVote']]
-
-    #quebecVotersData = findCorrelationWithQuebecProvince(provinceAnswers, finalVotes)
-    #biggestIssueData = findCorrelationForBiggestIssue(bestAdressesIssue, finalVotes)
-    #mostWantedOutcomeData = findCorrelationMostWantedOutcome(desiredOutcome, finalVotes)
-    #affiliationPhiloDaa = findCorrelationAffiliationPgilosophique(affinitePolitique, confidenceAffinete, actualVotes)
-    #gaveMoneyToParty = findCorrelationWithDonations(partyMember, finalVotes)
-
+def findTrudeauSatisfactionCorrelation(currentTrudeauSatisfaction, finalVotes):
     verySatisfiedCount = 0
     fairlySatisfiedCount = 0
     notVerySatisfiedCount = 0
@@ -320,6 +292,59 @@ def main():
 
     print("Dont know: {dontKnow}  Voted For Liberals: {dontKnowAndVotedForLiberals}".format(
     dontKnow=dontKnowCount, dontKnowAndVotedForLiberals=dontKnowAndVotedForLiberalsCount))
+
+
+def main():
+    desiredOutcome = data[['Unnamed: 0', 'cps19_outcome_most']]
+    provinceAnswers = data[['Unnamed: 0', 'cps19_province']]
+    bestAdressesIssue = data[['Unnamed: 0', 'cps19_imp_iss_party']]
+    affinitePolitique = data[['Unnamed: 0', 'cps19_fed_id']]
+    confidenceAffinete = data[['Unnamed: 0', "cps19_fed_id_str"]]
+    partyMember = data[['Unnamed: 0', "cps19_fed_member"]]
+    currentTrudeauSatisfaction = data[['Unnamed: 0', "cps19_fed_gov_sat"]]
+
+
+    vote = np.where(pd.isna(data["cps19_votechoice"]), data["cps19_votechoice_pr"], data["cps19_votechoice"])
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlikely"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlike_pr"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_v_advance"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_lean"], vote)
+    data["finalVote"] = vote
+    finalVotes = data[['Unnamed: 0', 'finalVote']]
+
+
+    #data[(data["pes19_province"] != "Quebec") & (finalVotes["vote"] == "Bloc Qu<e9>b<e9>cois")].count()[0]
+
+    #print(finalVotes['finalVote'])
+
+    """
+    nanCount = 0
+    for i in range(0, len(finalVotes)):
+        #print(finalVotes.iloc[i]['Unnamed: 0'], finalVotes.iloc[i]['finalVote'])
+        if pd.isna(finalVotes.iloc[i]['finalVote']):
+            nanCount +=1
+    print(nanCount)
+    """
+
+    #quebecVotersData = findCorrelationWithQuebecProvince(provinceAnswers, finalVotes)
+    #print(quebecVotersData)
+
+    #biggestIssueData = findCorrelationForBiggestIssue(bestAdressesIssue, finalVotes)
+    #print(biggestIssueData)
+
+    #mostWantedOutcomeData = findCorrelationMostWantedOutcome(desiredOutcome, finalVotes)
+    #print(mostWantedOutcomeData)
+
+    #affiliationPhiloData = findCorrelationAffiliationPgilosophique(affinitePolitique, confidenceAffinete, finalVotes)
+    #print(affiliationPhiloData)
+
+
+    #gaveMoneyToPartyData = findCorrelationWithDonations(partyMember, finalVotes)
+    #print(gaveMoneyToPartyData)
+
+    trudeauSatisfactionData = findTrudeauSatisfactionCorrelation(currentTrudeauSatisfaction, finalVotes)
+    print(trudeauSatisfactionData)
+
 
 
 if __name__ == '__main__':
