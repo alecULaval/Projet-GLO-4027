@@ -2,8 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
+from sklearn import preprocessing
 from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
 import os
+
+from sklearn.ensemble import RandomForestClassifier
 
 print(pd.__version__)
 
@@ -145,7 +149,8 @@ def get_best_questions(data, getMin=False):
                 vote = contingency[answer].idxmax()
                 total = contingency[answer].sum()
                 score = voters / total
-                results = results.append(pd.DataFrame([[colonne, answer, vote, score, total]],
+                if vote not in ["Conservative Party", "Liberal Party"]:
+                    results = results.append(pd.DataFrame([[colonne, answer, vote, score, total]],
                                                       columns=['column', 'answer', 'vote', 'score', 'size']))
 
                 if getMin:
@@ -160,7 +165,7 @@ def get_best_questions(data, getMin=False):
 
     results = results.sort_values(by=['score'], ascending=False)
     for column, answer, vote, score, size in results.values:
-        print(f"{column:40} {answer:40} {vote:40} Score:{score:.2f} Size:{size:.2f}")
+        print(f"{column} & {answer} & {vote} & {score:.2f} & {size:.0f}")
 
 
 def clean_boolean(data, columns):
@@ -248,11 +253,20 @@ def plotStackedHist(classes, labels, data, X, labelNames, ylabel='', title=''):
 
 def reduceLabels(labels):
     for i, label in enumerate(labels):
-        listOfWords = label.split()
+        listOfWords = str(label).split()
         newWord = ""
         for word in listOfWords:
             newWord = newWord + word[:8] + "\n"
         labels[i] = newWord[:-1]
+
+
+def reduceLabelsAttributes(labels, length=8):
+    for i, label in enumerate(labels):
+        if (label[:6] == "cps19_") or (label[:6] == "pes19_"):
+            label = label[6:]
+        for lines in range(i%3):
+            label = "\n" + label
+
 
 def standardStackedHist(data, attribute):
     attribute_vote = [attribute[:]]
@@ -297,41 +311,33 @@ def attributeClustering(data, attribute, n_clusters=9):
     plotStackedHist(classes, labels, filteredData, X2, labelNames, ylabel='Nombre de répondants', title='Clustering: ' + attribute)
 
 
-def main():
-    data = pd.read_csv("CES19.csv")
-    # questionnaire(data)
+def plotPieChart(data, attribute, title="Title"):
 
-    data["isUnknown"] = ((pd.isna(data["cps19_votechoice"])) & (pd.isna(data["cps19_votechoice_pr"]))
-         & (pd.isna(data["cps19_vote_unlikely"])) & (pd.isna(data["cps19_vote_unlike_pr"]))
-         & (pd.isna(data["cps19_v_advance"])) & (pd.isna(data["cps19_votechoice_7_TEXT"]))
-         & (pd.isna(data["cps19_vote_unlikely_7_TEXT"])) & (pd.isna(data["cps19_vote_unlike_pr_7_TEXT"]))
-         & (pd.isna(data["cps19_v_advance_7_TEXT"])) & (pd.isna(data["cps19_vote_lean"]))
-         & (pd.isna(data["cps19_vote_lean_7_TEXT"])) & (pd.isna(data["cps19_vote_lean_pr"]))
-         & (pd.isna(data["cps19_vote_lean_pr_7_TEXT"])) & (pd.isna(data["cps19_2nd_choice"]))
-         & (pd.isna(data["cps19_2nd_choice_7_TEXT"])) & (pd.isna(data["cps19_2nd_choice_pr"]))
-         & (pd.isna(data["cps19_2nd_choice_pr_7_TEXT"])) & (pd.isna(data["cps19_not_vote_for_1"]))
-         & (pd.isna(data["cps19_not_vote_for_2"])) & (pd.isna(data["cps19_not_vote_for_3"]))
-         & (pd.isna(data["cps19_not_vote_for_4"])) & (pd.isna(data["cps19_not_vote_for_5"]))
-         & (pd.isna(data["cps19_not_vote_for_6"])) & (pd.isna(data["cps19_not_vote_for_7"]))
-         & (pd.isna(data["cps19_not_vote_for_8"])) & (pd.isna(data["cps19_not_vote_for_9"])))
-    vote = np.where(pd.isna(data["cps19_votechoice"]), data["cps19_votechoice_pr"], data["cps19_votechoice"])
-    vote = np.where(pd.isna(vote), data["cps19_vote_unlikely"], vote)
-    vote = np.where(pd.isna(vote), data["cps19_vote_unlike_pr"], vote)
-    vote = np.where(pd.isna(vote), data["cps19_v_advance"], vote)
-    vote = np.where(pd.isna(vote), data["cps19_vote_lean"], vote)
-    data["vote"] = vote
-    data = clean_boolean(data, ["cps19_lead_int_113", "cps19_lead_int_114", "cps19_lead_int_115", "cps19_lead_int_116",
-                                "cps19_lead_int_117", "cps19_lead_int_118", "cps19_lead_int_119", "cps19_lead_int_120"])
-    data = clean_boolean(data, ["cps19_lead_strong_113", "cps19_lead_strong_114", "cps19_lead_strong_115",
-                                "cps19_lead_strong_116", "cps19_lead_strong_117", "cps19_lead_strong_118",
-                                "cps19_lead_strong_119", "cps19_lead_strong_120"])
-    data = clean_boolean(data, ["cps19_lead_trust_113", "cps19_lead_trust_114", "cps19_lead_trust_115", "cps19_lead_trust_116",
-                                "cps19_lead_trust_117", "cps19_lead_trust_118", "cps19_lead_trust_119", "cps19_lead_trust_120"])
-    data = clean_boolean(data, ["cps19_lead_cares_113", "cps19_lead_cares_114", "cps19_lead_cares_115", "cps19_lead_cares_116",
-                                "cps19_lead_cares_117", "cps19_lead_cares_118", "cps19_lead_cares_119", "cps19_lead_cares_120"])
-    #exploration(data, verbose=False)
-    #get_best_questions(data)
+    filteredData = data[pd.notnull(data[attribute])][attribute]
 
+    X = filteredData
+    X = X.to_numpy()
+    labels = np.unique(X)
+
+    counts = []
+    for label in labels:
+        count = filteredData[filteredData == label].count()
+        counts.append(count)
+
+    fig, ax = plt.subplots()
+    ax.pie(counts, radius=3, center=(4, 4), labels=labels,
+           wedgeprops={"linewidth": 1, "edgecolor": "white"}, frame=True)
+
+    ax.set(xlim=(0, 8), xticks=np.arange(1, 8),
+           ylim=(0, 8), yticks=np.arange(1, 8))
+
+    plt.legend()
+    plt.show()
+
+
+# Fonction pas du tout nettoyée, retirée du main
+def plotMultiClustering(data):
+    plotPieChart(data, "vote")
     train_data = data[pd.notnull(data["vote"])]
     standardStackedHist(train_data, "cps19_issue_handle_1")
 
@@ -350,7 +356,6 @@ def main():
                 "cps19_lead_cares_113", "cps19_lead_cares_114", "cps19_lead_cares_115", "cps19_lead_cares_116",
                 "cps19_lead_cares_117", "cps19_lead_cares_118", "cps19_lead_cares_119", "cps19_lead_cares_120"]
 
-    attribut = ["cps19_interest_gen_1"]
     attribut_vote = attribut[:]
     attribut_vote.append("vote")
 
@@ -391,9 +396,89 @@ def main():
 
     classes = np.unique(y)
 
-    plotStackedHist(classes, labels, extractedData, X2, labelNames, ylabel='Répondants par groupe', title='Clustering')
+    plotStackedHist(classes, labels, extractedData, X2, labelNames, ylabel='Répondants par groupe', title='Clustering: ratings')
 
-    print("Break Here")
+
+def fillMissingValues(data, columnList):
+
+    for column in columnList:
+        replacement = -1
+
+        singleValue = data[pd.notnull(data[column])][column].any()
+        if type(singleValue) is str:
+            replacement = "No Answer"
+
+        data[column].fillna(replacement, inplace=True)
+
+
+def main():
+    data = pd.read_csv("CES19.csv")
+    # questionnaire(data)
+
+    data["isUnknown"] = ((pd.isna(data["cps19_votechoice"])) & (pd.isna(data["cps19_votechoice_pr"]))
+         & (pd.isna(data["cps19_vote_unlikely"])) & (pd.isna(data["cps19_vote_unlike_pr"]))
+         & (pd.isna(data["cps19_v_advance"])) & (pd.isna(data["cps19_votechoice_7_TEXT"]))
+         & (pd.isna(data["cps19_vote_unlikely_7_TEXT"])) & (pd.isna(data["cps19_vote_unlike_pr_7_TEXT"]))
+         & (pd.isna(data["cps19_v_advance_7_TEXT"])) & (pd.isna(data["cps19_vote_lean"]))
+         & (pd.isna(data["cps19_vote_lean_7_TEXT"])) & (pd.isna(data["cps19_vote_lean_pr"]))
+         & (pd.isna(data["cps19_vote_lean_pr_7_TEXT"])) & (pd.isna(data["cps19_2nd_choice"]))
+         & (pd.isna(data["cps19_2nd_choice_7_TEXT"])) & (pd.isna(data["cps19_2nd_choice_pr"]))
+         & (pd.isna(data["cps19_2nd_choice_pr_7_TEXT"])) & (pd.isna(data["cps19_not_vote_for_1"]))
+         & (pd.isna(data["cps19_not_vote_for_2"])) & (pd.isna(data["cps19_not_vote_for_3"]))
+         & (pd.isna(data["cps19_not_vote_for_4"])) & (pd.isna(data["cps19_not_vote_for_5"]))
+         & (pd.isna(data["cps19_not_vote_for_6"])) & (pd.isna(data["cps19_not_vote_for_7"]))
+         & (pd.isna(data["cps19_not_vote_for_8"])) & (pd.isna(data["cps19_not_vote_for_9"])))
+    vote = np.where(pd.isna(data["cps19_votechoice"]), data["cps19_votechoice_pr"], data["cps19_votechoice"])
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlikely"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_v_advance"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_lean"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_lean_pr"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlike_pr"], vote)
+    data["vote"] = vote
+    data = clean_boolean(data, ["cps19_lead_int_113", "cps19_lead_int_114", "cps19_lead_int_115", "cps19_lead_int_116",
+                                "cps19_lead_int_117", "cps19_lead_int_118", "cps19_lead_int_119", "cps19_lead_int_120"])
+    data = clean_boolean(data, ["cps19_lead_strong_113", "cps19_lead_strong_114", "cps19_lead_strong_115",
+                                "cps19_lead_strong_116", "cps19_lead_strong_117", "cps19_lead_strong_118",
+                                "cps19_lead_strong_119", "cps19_lead_strong_120"])
+    data = clean_boolean(data, ["cps19_lead_trust_113", "cps19_lead_trust_114", "cps19_lead_trust_115", "cps19_lead_trust_116",
+                                "cps19_lead_trust_117", "cps19_lead_trust_118", "cps19_lead_trust_119", "cps19_lead_trust_120"])
+    data = clean_boolean(data, ["cps19_lead_cares_113", "cps19_lead_cares_114", "cps19_lead_cares_115", "cps19_lead_cares_116",
+                                "cps19_lead_cares_117", "cps19_lead_cares_118", "cps19_lead_cares_119", "cps19_lead_cares_120"])
+
+    fillMissingValues(data, ["cps19_party_rating_23", "cps19_party_rating_24", "cps19_party_rating_25", "cps19_party_rating_26",
+                "cps19_party_rating_27", "cps19_party_rating_28", "cps19_lead_rating_23", "cps19_lead_rating_24",
+                "cps19_lead_rating_25", "cps19_lead_rating_26", "cps19_lead_rating_27", "cps19_lead_rating_28",
+                "cps19_cand_rating_23", "cps19_cand_rating_24", "cps19_cand_rating_25", "cps19_cand_rating_26",
+                "cps19_cand_rating_27", "cps19_cand_rating_28"])
+
+
+    listeDeColonnes = ['cps19_province', 'cps19_outcome_most', 'cps19_imp_iss_party', 'cps19_fed_id', 'cps19_fed_member', 'cps19_fed_gov_sat', 'pid_en', 'pid_party_en', 'pid_party_fr', 'cps19_prov_id', 'cps19_vote_2015']
+    listeDeColonnes = ['cps19_outcome_most']
+    X = data[pd.notnull(data['vote']) & pd.notnull(data['cps19_outcome_most'])][listeDeColonnes]
+    y = data[pd.notnull(data['vote']) & pd.notnull(data['cps19_outcome_most'])]['vote']
+    #X_unknown = data[pd.isnull(data['vote'])][[listeDeColonnes]]
+
+
+    listeDeColonnesNonInt = ['cps19_province', 'cps19_outcome_most', 'cps19_imp_iss_party', 'cps19_fed_id', 'cps19_fed_member', 'cps19_fed_gov_sat', 'pid_en', 'pid_party_en', 'pid_party_fr', 'cps19_prov_id', 'cps19_vote_2015']
+    listeDeColonnesNonInt = ['cps19_outcome_most']
+    le = preprocessing.LabelEncoder()
+    for column in listeDeColonnesNonInt:
+        le.fit(data[column])
+        X[column] = le.transform(X[column])
+
+    scores = []
+    for i in range(1):
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.10)
+
+        clf = RandomForestClassifier()
+        clf.fit(X_train, y_train)
+
+        score = clf.score(X_test, y_test)
+        scores.append(score)
+    avgScore = np.array(scores).mean()
+    print("Score: " + str(avgScore))
+
+
 
 if __name__ == '__main__':
     main()
