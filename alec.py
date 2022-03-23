@@ -2,6 +2,15 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import  BernoulliNB
+from sklearn.metrics import accuracy_score
+
+
 
 
 Index= ['aaa', 'bbb', 'ccc', 'ddd', 'eee']
@@ -328,23 +337,45 @@ def main():
 
     #quebecVotersData = findCorrelationWithQuebecProvince(provinceAnswers, finalVotes)
     #print(quebecVotersData)
-
     #biggestIssueData = findCorrelationForBiggestIssue(bestAdressesIssue, finalVotes)
     #print(biggestIssueData)
-
     #mostWantedOutcomeData = findCorrelationMostWantedOutcome(desiredOutcome, finalVotes)
     #print(mostWantedOutcomeData)
-
     #affiliationPhiloData = findCorrelationAffiliationPgilosophique(affinitePolitique, confidenceAffinete, finalVotes)
     #print(affiliationPhiloData)
-
-
     #gaveMoneyToPartyData = findCorrelationWithDonations(partyMember, finalVotes)
     #print(gaveMoneyToPartyData)
+    #trudeauSatisfactionData = findTrudeauSatisfactionCorrelation(currentTrudeauSatisfaction, finalVotes)
 
-    trudeauSatisfactionData = findTrudeauSatisfactionCorrelation(currentTrudeauSatisfaction, finalVotes)
-    print(trudeauSatisfactionData)
+    le = LabelEncoder()
 
+    #Getting the right rows without NaN to get correct probabilities
+    vote = data["finalVote"][~data['cps19_outcome_most'].isna()][~data['finalVote'].isna()]
+    desiredOutcome = data['cps19_outcome_most'][~data['cps19_outcome_most'].isna()][~data['finalVote'].isna()]
+
+    #Encoding the string data into numerical values
+    desiredOutcomeEncoded = le.fit_transform(desiredOutcome)
+    le_outcome_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
+    voteEncoded = le.fit_transform(vote)
+    le_vote_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
+
+    #Getting our Test and Training subsets
+    X_train, X_test, y_train, y_test = train_test_split(desiredOutcomeEncoded, voteEncoded, test_size=0.20, random_state=1)
+
+    #Why is Gaussian much better than Multinomial and Bernouilli ????
+    clf = GaussianNB()
+    clf.fit(X_train.reshape(-1, 1), y_train)
+    y_pred = clf.predict(X_test.reshape(-1, 1))
+    successRate = accuracy_score(y_true=y_test, y_pred = y_pred)
+
+    #Print the predicted results
+    for y in y_pred:
+        for vote, voteMappping in le_vote_mapping.items():
+            if y == voteMappping:
+                print(vote)
+    print(successRate)
+    print(le_vote_mapping)
+    print(le_outcome_mapping)
 
 
 if __name__ == '__main__':
