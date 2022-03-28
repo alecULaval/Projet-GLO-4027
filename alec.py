@@ -303,7 +303,115 @@ def findTrudeauSatisfactionCorrelation(currentTrudeauSatisfaction, finalVotes):
     dontKnow=dontKnowCount, dontKnowAndVotedForLiberals=dontKnowAndVotedForLiberalsCount))
 
 
+def findSucessWithoutNaN(columnToUse, desiredAnswer):
+    vote = np.where(pd.isna(data["cps19_votechoice"]), data["cps19_votechoice_pr"], data["cps19_votechoice"])
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlikely"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlike_pr"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_v_advance"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_lean"], vote)
+    data["finalVote"] = vote
+
+    le = LabelEncoder()
+
+    answersToUse  = data[columnToUse][~data[columnToUse].isna()][~data['finalVote'].isna()]
+    vote = data["finalVote"][~data[columnToUse].isna()][~data['finalVote'].isna()]
+
+    voteEncoded = le.fit_transform(vote)
+    le_vote_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
+
+    answersEncoded = le.fit_transform(answersToUse)
+    le_answer_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
+
+    X_train, X_test, y_train, y_test = train_test_split(answersEncoded, voteEncoded, test_size=0.20, random_state=1)
+
+    return 1
+
+
 def main():
+
+    vote = np.where(pd.isna(data["cps19_votechoice"]), data["cps19_votechoice_pr"], data["cps19_votechoice"])
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlikely"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlike_pr"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_v_advance"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_lean"], vote)
+    data["finalVote"] = vote
+
+
+    test = findSucessWithoutNaN('')
+
+    """
+    COLUMNS_FOR_CLASSIFICATION = ['cps19_province', 'cps19_outcome_most', 'cps19_imp_iss_party',
+                                  'cps19_fed_id', 'cps19_fed_member', 'cps19_fed_gov_sat', 'pid_en', 'pid_party_en',
+                                  'pid_party_fr',
+                                  'cps19_prov_id', 'cps19_vote_2015']
+
+    le = LabelEncoder()
+
+    X = data[pd.notnull(data['finalVote'])][COLUMNS_FOR_CLASSIFICATION]
+    y = data[pd.notnull(data['finalVote'])]['finalVote']
+
+    for column in COLUMNS_FOR_CLASSIFICATION:
+        X[column] = le.fit_transform(X[column])
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.10)
+    clf = GaussianNB()
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    successRate = accuracy_score(y_true=y_test, y_pred = y_pred)
+
+    for y in y_pred:
+        print(y)
+    """
+
+
+    #Getting the right rows without NaN to get correct probabilities
+    #vote = data["finalVote"][~data['cps19_outcome_most'].isna()][~data['finalVote'].isna()]
+    #desiredOutcome = data['cps19_outcome_most'][~data['cps19_outcome_most'].isna()][~data['finalVote'].isna()]
+    """
+    vote = data["finalVote"][~data['finalVote'].isna()]
+    desiredOutcome = data['cps19_outcome_most'][~data['finalVote'].isna()]
+    biggestIssue = data['cps19_imp_iss_party'][~data['finalVote'].isna()]
+
+    #Encoding the string data into numerical values
+    voteEncoded = le.fit_transform(vote)
+    le_vote_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
+    desiredOutcomeEncoded = le.fit_transform(desiredOutcome)
+    le_outcome_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
+    biggestIssueEncoded = le.fit_transform(vote)
+    le_issue_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
+
+    features = zip(desiredOutcomeEncoded, biggestIssueEncoded)
+
+    #Getting our Test and Training subsets
+    X_train, X_test, y_train, y_test = train_test_split(features, voteEncoded, test_size=0.20, random_state=1)
+    """
+
+
+    """
+    #Why is Gaussian much better than Multinomial and Bernouilli ????
+    clf = GaussianNB()
+    clf.fit(X_train.reshape(-1, 1), y_train)
+    y_pred = clf.predict(X_test.reshape(-1, 1))
+    successRate = accuracy_score(y_true=y_test, y_pred = y_pred)
+    """
+
+    #Print the predicted results
+    """
+    for y in y_pred:
+        for vote, voteMappping in le_vote_mapping.items():
+            if y == voteMappping:
+                print(vote)
+    """
+    #print(successRate)
+    #print(le_vote_mapping)
+    #print(le_outcome_mapping)
+
+
+if __name__ == '__main__':
+    main()
+
+
+"""
     desiredOutcome = data[['Unnamed: 0', 'cps19_outcome_most']]
     provinceAnswers = data[['Unnamed: 0', 'cps19_province']]
     bestAdressesIssue = data[['Unnamed: 0', 'cps19_imp_iss_party']]
@@ -325,67 +433,4 @@ def main():
     #data[(data["pes19_province"] != "Quebec") & (finalVotes["vote"] == "Bloc Qu<e9>b<e9>cois")].count()[0]
 
     #print(finalVotes['finalVote'])
-
-    """
-    nanCount = 0
-    for i in range(0, len(finalVotes)):
-        #print(finalVotes.iloc[i]['Unnamed: 0'], finalVotes.iloc[i]['finalVote'])
-        if pd.isna(finalVotes.iloc[i]['finalVote']):
-            nanCount +=1
-    print(nanCount)
-    """
-
-    #quebecVotersData = findCorrelationWithQuebecProvince(provinceAnswers, finalVotes)
-    #print(quebecVotersData)
-    #biggestIssueData = findCorrelationForBiggestIssue(bestAdressesIssue, finalVotes)
-    #print(biggestIssueData)
-    #mostWantedOutcomeData = findCorrelationMostWantedOutcome(desiredOutcome, finalVotes)
-    #print(mostWantedOutcomeData)
-    #affiliationPhiloData = findCorrelationAffiliationPgilosophique(affinitePolitique, confidenceAffinete, finalVotes)
-    #print(affiliationPhiloData)
-    #gaveMoneyToPartyData = findCorrelationWithDonations(partyMember, finalVotes)
-    #print(gaveMoneyToPartyData)
-    #trudeauSatisfactionData = findTrudeauSatisfactionCorrelation(currentTrudeauSatisfaction, finalVotes)
-
-    le = LabelEncoder()
-
-    #Getting the right rows without NaN to get correct probabilities
-    vote = data["finalVote"][~data['cps19_outcome_most'].isna()][~data['finalVote'].isna()]
-    desiredOutcome = data['cps19_outcome_most'][~data['cps19_outcome_most'].isna()][~data['finalVote'].isna()]
-
-    #Encoding the string data into numerical values
-    desiredOutcomeEncoded = le.fit_transform(desiredOutcome)
-    le_outcome_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
-    voteEncoded = le.fit_transform(vote)
-    le_vote_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
-
-    #Getting our Test and Training subsets
-    X_train, X_test, y_train, y_test = train_test_split(desiredOutcomeEncoded, voteEncoded, test_size=0.20, random_state=1)
-
-    #Why is Gaussian much better than Multinomial and Bernouilli ????
-    clf = GaussianNB()
-    clf.fit(X_train.reshape(-1, 1), y_train)
-    y_pred = clf.predict(X_test.reshape(-1, 1))
-    successRate = accuracy_score(y_true=y_test, y_pred = y_pred)
-
-    #Print the predicted results
-    for y in y_pred:
-        for vote, voteMappping in le_vote_mapping.items():
-            if y == voteMappping:
-                print(vote)
-    print(successRate)
-    print(le_vote_mapping)
-    print(le_outcome_mapping)
-
-
-if __name__ == '__main__':
-    main()
-
 """
-for i in desiredOutcome['cps19_outcome_most']:
-    if not pd.isna(i):
-        print(i)
-"""
-
-
-#print(desiredOutcome)
