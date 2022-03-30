@@ -337,9 +337,9 @@ def main():
     data["finalVote"] = vote
 
 
-    test = findSucessWithoutNaN('')
+    #test = findSucessWithoutNaN('')
 
-    """
+
     COLUMNS_FOR_CLASSIFICATION = ['cps19_province', 'cps19_outcome_most', 'cps19_imp_iss_party',
                                   'cps19_fed_id', 'cps19_fed_member', 'cps19_fed_gov_sat', 'pid_en', 'pid_party_en',
                                   'pid_party_fr',
@@ -359,9 +359,6 @@ def main():
     y_pred = clf.predict(X_test)
     successRate = accuracy_score(y_true=y_test, y_pred = y_pred)
 
-    for y in y_pred:
-        print(y)
-    """
 
 
     #Getting the right rows without NaN to get correct probabilities
@@ -402,7 +399,7 @@ def main():
             if y == voteMappping:
                 print(vote)
     """
-    #print(successRate)
+    print(successRate)
     #print(le_vote_mapping)
     #print(le_outcome_mapping)
 
