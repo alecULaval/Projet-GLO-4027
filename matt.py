@@ -2,12 +2,22 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
+import graphviz
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
+from datetime import datetime
+from sklearn import tree
 import os
+#import h2o
+#from h2o.estimators import H2ORandomForestEstimator
+#h2o.init()
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
 
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import export_graphviz
 
 print(pd.__version__)
 
@@ -410,75 +420,137 @@ def fillMissingValues(data, columnList):
 
         data[column].fillna(replacement, inplace=True)
 
-
-def main():
-    data = pd.read_csv("CES19.csv")
-    # questionnaire(data)
-
+def addVoteColumn(data):
     data["isUnknown"] = ((pd.isna(data["cps19_votechoice"])) & (pd.isna(data["cps19_votechoice_pr"]))
-         & (pd.isna(data["cps19_vote_unlikely"])) & (pd.isna(data["cps19_vote_unlike_pr"]))
-         & (pd.isna(data["cps19_v_advance"])) & (pd.isna(data["cps19_votechoice_7_TEXT"]))
-         & (pd.isna(data["cps19_vote_unlikely_7_TEXT"])) & (pd.isna(data["cps19_vote_unlike_pr_7_TEXT"]))
-         & (pd.isna(data["cps19_v_advance_7_TEXT"])) & (pd.isna(data["cps19_vote_lean"]))
-         & (pd.isna(data["cps19_vote_lean_7_TEXT"])) & (pd.isna(data["cps19_vote_lean_pr"]))
-         & (pd.isna(data["cps19_vote_lean_pr_7_TEXT"])) & (pd.isna(data["cps19_2nd_choice"]))
-         & (pd.isna(data["cps19_2nd_choice_7_TEXT"])) & (pd.isna(data["cps19_2nd_choice_pr"]))
-         & (pd.isna(data["cps19_2nd_choice_pr_7_TEXT"])) & (pd.isna(data["cps19_not_vote_for_1"]))
-         & (pd.isna(data["cps19_not_vote_for_2"])) & (pd.isna(data["cps19_not_vote_for_3"]))
-         & (pd.isna(data["cps19_not_vote_for_4"])) & (pd.isna(data["cps19_not_vote_for_5"]))
-         & (pd.isna(data["cps19_not_vote_for_6"])) & (pd.isna(data["cps19_not_vote_for_7"]))
-         & (pd.isna(data["cps19_not_vote_for_8"])) & (pd.isna(data["cps19_not_vote_for_9"])))
+                         & (pd.isna(data["cps19_vote_unlikely"])) & (pd.isna(data["cps19_vote_unlike_pr"]))
+                         & (pd.isna(data["cps19_v_advance"])) & (pd.isna(data["cps19_votechoice_7_TEXT"]))
+                         & (pd.isna(data["cps19_vote_unlikely_7_TEXT"])) & (
+                             pd.isna(data["cps19_vote_unlike_pr_7_TEXT"]))
+                         & (pd.isna(data["cps19_v_advance_7_TEXT"])) & (pd.isna(data["cps19_vote_lean"]))
+                         & (pd.isna(data["cps19_vote_lean_7_TEXT"])) & (pd.isna(data["cps19_vote_lean_pr"]))
+                         & (pd.isna(data["cps19_vote_lean_pr_7_TEXT"])) & (pd.isna(data["cps19_2nd_choice"]))
+                         & (pd.isna(data["cps19_2nd_choice_7_TEXT"])) & (pd.isna(data["cps19_2nd_choice_pr"]))
+                         & (pd.isna(data["cps19_2nd_choice_pr_7_TEXT"])) & (pd.isna(data["cps19_not_vote_for_1"]))
+                         & (pd.isna(data["cps19_not_vote_for_2"])) & (pd.isna(data["cps19_not_vote_for_3"]))
+                         & (pd.isna(data["cps19_not_vote_for_4"])) & (pd.isna(data["cps19_not_vote_for_5"]))
+                         & (pd.isna(data["cps19_not_vote_for_6"])) & (pd.isna(data["cps19_not_vote_for_7"]))
+                         & (pd.isna(data["cps19_not_vote_for_8"])) & (pd.isna(data["cps19_not_vote_for_9"])))
+
     vote = np.where(pd.isna(data["cps19_votechoice"]), data["cps19_votechoice_pr"], data["cps19_votechoice"])
     vote = np.where(pd.isna(vote), data["cps19_vote_unlikely"], vote)
+    vote = np.where(pd.isna(vote), data["cps19_vote_unlike_pr"], vote)
     vote = np.where(pd.isna(vote), data["cps19_v_advance"], vote)
     vote = np.where(pd.isna(vote), data["cps19_vote_lean"], vote)
     vote = np.where(pd.isna(vote), data["cps19_vote_lean_pr"], vote)
-    vote = np.where(pd.isna(vote), data["cps19_vote_unlike_pr"], vote)
+    vote = np.where(vote != "I do not intend to vote", vote, None)
     data["vote"] = vote
-    data = clean_boolean(data, ["cps19_lead_int_113", "cps19_lead_int_114", "cps19_lead_int_115", "cps19_lead_int_116",
-                                "cps19_lead_int_117", "cps19_lead_int_118", "cps19_lead_int_119", "cps19_lead_int_120"])
-    data = clean_boolean(data, ["cps19_lead_strong_113", "cps19_lead_strong_114", "cps19_lead_strong_115",
-                                "cps19_lead_strong_116", "cps19_lead_strong_117", "cps19_lead_strong_118",
-                                "cps19_lead_strong_119", "cps19_lead_strong_120"])
-    data = clean_boolean(data, ["cps19_lead_trust_113", "cps19_lead_trust_114", "cps19_lead_trust_115", "cps19_lead_trust_116",
-                                "cps19_lead_trust_117", "cps19_lead_trust_118", "cps19_lead_trust_119", "cps19_lead_trust_120"])
-    data = clean_boolean(data, ["cps19_lead_cares_113", "cps19_lead_cares_114", "cps19_lead_cares_115", "cps19_lead_cares_116",
-                                "cps19_lead_cares_117", "cps19_lead_cares_118", "cps19_lead_cares_119", "cps19_lead_cares_120"])
 
-    fillMissingValues(data, ["cps19_party_rating_23", "cps19_party_rating_24", "cps19_party_rating_25", "cps19_party_rating_26",
-                "cps19_party_rating_27", "cps19_party_rating_28", "cps19_lead_rating_23", "cps19_lead_rating_24",
-                "cps19_lead_rating_25", "cps19_lead_rating_26", "cps19_lead_rating_27", "cps19_lead_rating_28",
-                "cps19_cand_rating_23", "cps19_cand_rating_24", "cps19_cand_rating_25", "cps19_cand_rating_26",
-                "cps19_cand_rating_27", "cps19_cand_rating_28"])
+    data.drop(columns=["cps19_votechoice", "cps19_votechoice_pr", "cps19_vote_unlikely", "cps19_vote_unlike_pr",
+                       "cps19_v_advance", "cps19_votechoice_7_TEXT", "cps19_vote_unlikely_7_TEXT",
+                       "cps19_vote_unlike_pr_7_TEXT", "cps19_v_advance_7_TEXT", "cps19_vote_lean",
+                       "cps19_vote_lean_7_TEXT", "cps19_vote_lean_pr", "cps19_vote_lean_pr_7_TEXT", "cps19_2nd_choice",
+                       "cps19_2nd_choice_7_TEXT", "cps19_2nd_choice_pr", "cps19_2nd_choice_pr_7_TEXT",
+                       "cps19_not_vote_for_1", "cps19_not_vote_for_2", "cps19_not_vote_for_3", "cps19_not_vote_for_4",
+                       "cps19_not_vote_for_5", "cps19_not_vote_for_6", "cps19_not_vote_for_7", "cps19_not_vote_for_8",
+                       "cps19_not_vote_for_9", "cps19_votechoice_pr_7_TEXT", "cps19_not_vote_for_7_TEXT"], inplace=True)
+    return data
 
 
-    listeDeColonnes = ['cps19_province', 'cps19_outcome_most', 'cps19_imp_iss_party', 'cps19_fed_id', 'cps19_fed_member', 'cps19_fed_gov_sat', 'pid_en', 'pid_party_en', 'pid_party_fr', 'cps19_prov_id', 'cps19_vote_2015']
-    listeDeColonnes = ['cps19_outcome_most']
-    X = data[pd.notnull(data['vote']) & pd.notnull(data['cps19_outcome_most'])][listeDeColonnes]
-    y = data[pd.notnull(data['vote']) & pd.notnull(data['cps19_outcome_most'])]['vote']
+def dateToInt(data, column):
+    X = data[column].to_numpy()
+    Y = np.array([datetime.strptime(Xi, '%Y-%m-%d %H:%M:%S').timestamp() for Xi in X])
+    data[column] = Y
+    return data
+
+
+def main():
+    data = pd.read_csv("CES19.csv")
+    data = addVoteColumn(data)
+
+    DATE_COLUMNS = ["cps19_StartDate"]
+    COLUMNS_TO_CLUSTER = ["cps19_StartDate", "cps19_party_rating_23"]
+    COLUMNS_STRING_TO_INT = ['cps19_province', 'cps19_outcome_most', 'cps19_imp_iss_party', 'cps19_fed_id',
+                             'cps19_fed_member', 'cps19_fed_gov_sat', 'pid_en', 'pid_party_en', 'pid_party_fr',
+                             'cps19_prov_id', 'cps19_vote_2015']
+    COLUMNS_FOR_CLASSIFICATION = ["cps19_StartDate", 'cps19_province', 'cps19_outcome_most', 'cps19_imp_iss_party', 'cps19_fed_id',
+                             'cps19_fed_member', 'cps19_fed_gov_sat', 'pid_en', 'pid_party_en', 'pid_party_fr',
+                             'cps19_prov_id', 'cps19_vote_2015', "cps19_party_rating_23", "cps19_party_rating_23", "cps19_party_rating_24", "cps19_party_rating_25", "cps19_party_rating_26", "cps19_party_rating_27", "cps19_party_rating_28",
+                             "cps19_lead_rating_23", "cps19_lead_rating_24", "cps19_lead_rating_25", "cps19_lead_rating_26", "cps19_lead_rating_27", "cps19_lead_rating_28"]
+    BOOLEANS_TO_CLEAN = [["cps19_lead_int_113", "cps19_lead_int_114", "cps19_lead_int_115", "cps19_lead_int_116",
+                          "cps19_lead_int_117", "cps19_lead_int_118", "cps19_lead_int_119", "cps19_lead_int_120"],
+                         ["cps19_lead_strong_113", "cps19_lead_strong_114", "cps19_lead_strong_115",
+                          "cps19_lead_strong_116", "cps19_lead_strong_117", "cps19_lead_strong_118",
+                          "cps19_lead_strong_119", "cps19_lead_strong_120"],
+                         ["cps19_lead_trust_113", "cps19_lead_trust_114", "cps19_lead_trust_115",
+                          "cps19_lead_trust_116",
+                          "cps19_lead_trust_117", "cps19_lead_trust_118", "cps19_lead_trust_119",
+                          "cps19_lead_trust_120"],
+                         ["cps19_lead_cares_113", "cps19_lead_cares_114", "cps19_lead_cares_115",
+                          "cps19_lead_cares_116",
+                          "cps19_lead_cares_117", "cps19_lead_cares_118", "cps19_lead_cares_119",
+                          "cps19_lead_cares_120"]]
+    COLUMNS_TO_FILL = ["cps19_party_rating_23", "cps19_party_rating_24", "cps19_party_rating_25", "cps19_party_rating_26", "cps19_party_rating_27", "cps19_party_rating_28", "cps19_lead_rating_23", "cps19_lead_rating_24", "cps19_lead_rating_25", "cps19_lead_rating_26", "cps19_lead_rating_27", "cps19_lead_rating_28"]
+
+    for column in DATE_COLUMNS:
+        data = dateToInt(data, column)
+
+    #for column in COLUMNS_TO_CLUSTER:
+    #    data[column] = pd.cut(data[column], 20, labels=range(20))
+        #X = data[column]
+        #X = X.to_numpy()
+        #kmeans = KMeans(n_clusters=n_cluster).fit(X.reshape(-1, 1))
+        #data[column] = kmeans.predict(X.reshape(-1, 1))
+
+    for group in BOOLEANS_TO_CLEAN:
+        data = clean_boolean(data, group)
+
+
+    fillMissingValues(data, COLUMNS_TO_FILL)
+
+    X = data[pd.notnull(data['vote'])][COLUMNS_FOR_CLASSIFICATION]
+    y = data[pd.notnull(data['vote'])]['vote']
+
+    #y = np.where(y == 'People\'s Party', y, 'other')
     #X_unknown = data[pd.isnull(data['vote'])][[listeDeColonnes]]
 
+    #le = preprocessing.LabelEncoder()
+    #for column in COLUMNS_STRING_TO_INT:
+    #    le.fit(data[column])
+    #    X[column] = le.transform(X[column])
 
-    listeDeColonnesNonInt = ['cps19_province', 'cps19_outcome_most', 'cps19_imp_iss_party', 'cps19_fed_id', 'cps19_fed_member', 'cps19_fed_gov_sat', 'pid_en', 'pid_party_en', 'pid_party_fr', 'cps19_prov_id', 'cps19_vote_2015']
-    listeDeColonnesNonInt = ['cps19_outcome_most']
-    le = preprocessing.LabelEncoder()
-    for column in listeDeColonnesNonInt:
-        le.fit(data[column])
-        X[column] = le.transform(X[column])
+    for column in COLUMNS_STRING_TO_INT:
+        onehot = pd.get_dummies(X[column], prefix=column)
+        for oneHotColumn in onehot:
+            X[oneHotColumn] = onehot[oneHotColumn]
+        X.drop(columns=[column], inplace=True)
 
     scores = []
     for i in range(1):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.10)
 
-        clf = RandomForestClassifier()
+        clf = RandomForestClassifier(max_depth=10, min_samples_leaf=10)
         clf.fit(X_train, y_train)
 
         score = clf.score(X_test, y_test)
         scores.append(score)
+
+        predictions = clf.predict(X_test)
+        cm = confusion_matrix(y_test, predictions, labels=clf.classes_)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+            display_labels = clf.classes_)
+        disp.plot()
+        plt.show()
     avgScore = np.array(scores).mean()
     print("Score: " + str(avgScore))
 
+    export_graphviz(clf.estimators_[0], out_file='tree.dot',
+                    feature_names=X.columns,
+                    #class_names=iris.target_names,
+                    rounded=True, proportion=False,
+                    precision=2, filled=True)
 
+    from subprocess import call
+    call(['dot', '-Tpng', 'tree.dot', '-o', 'tree.png', '-Gdpi=600'])
 
 if __name__ == '__main__':
     main()
