@@ -9,9 +9,7 @@ from sklearn.model_selection import train_test_split
 from datetime import datetime
 from sklearn import tree
 import os
-#import h2o
-#from h2o.estimators import H2ORandomForestEstimator
-#h2o.init()
+import util
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
@@ -443,6 +441,14 @@ def addVoteColumn(data):
     vote = np.where(pd.isna(vote), data["cps19_vote_lean"], vote)
     vote = np.where(pd.isna(vote), data["cps19_vote_lean_pr"], vote)
     vote = np.where(vote != "I do not intend to vote", vote, None)
+    vote = np.where(vote == "ndp", "NPD", vote)
+    vote = np.where(vote == "Another party (please specify)", "Autre", vote)
+    vote = np.where(vote == "Bloc Qu<e9>b<e9>cois", "BQ", vote)
+    vote = np.where(vote == "Don't know/ Prefer not to answer", "NA", vote)
+    vote = np.where(vote == "Green Party", "PV", vote)
+    vote = np.where(vote == "Liberal Party", "PL", vote)
+    vote = np.where(vote == "Conservative Party", "PC", vote)
+    vote = np.where(vote == "People's Party", "PP", vote)
     data["vote"] = vote
 
     data.drop(columns=["cps19_votechoice", "cps19_votechoice_pr", "cps19_vote_unlikely", "cps19_vote_unlike_pr",
@@ -462,6 +468,19 @@ def dateToInt(data, column):
     data[column] = Y
     return data
 
+
+def stringToOneHot(X, X_unknown, columns):
+    for column in columns:
+        onehot = pd.get_dummies(X[column], prefix=column)
+        onehotUnknown = pd.get_dummies(X_unknown[column], prefix=column)
+        for oneHotColumn in onehot:
+            X[oneHotColumn] = onehot[oneHotColumn]
+            if oneHotColumn in onehotUnknown.columns:
+                X_unknown[oneHotColumn] = onehotUnknown[oneHotColumn]
+            else:
+                X_unknown[oneHotColumn] = 0
+        X.drop(columns=[column], inplace=True)
+        X_unknown.drop(columns=[column], inplace=True)
 
 def main():
     data = pd.read_csv("CES19.csv")
@@ -509,26 +528,23 @@ def main():
 
     X = data[pd.notnull(data['vote'])][COLUMNS_FOR_CLASSIFICATION]
     y = data[pd.notnull(data['vote'])]['vote']
+    unknown_indices = util.readResultFile()
+    X_unknown = data.iloc[unknown_indices][COLUMNS_FOR_CLASSIFICATION]
 
-    #y = np.where(y == 'People\'s Party', y, 'other')
-    #X_unknown = data[pd.isnull(data['vote'])][[listeDeColonnes]]
+    #y = np.where(y == "PL", y, 'other')
 
     #le = preprocessing.LabelEncoder()
     #for column in COLUMNS_STRING_TO_INT:
     #    le.fit(data[column])
     #    X[column] = le.transform(X[column])
 
-    for column in COLUMNS_STRING_TO_INT:
-        onehot = pd.get_dummies(X[column], prefix=column)
-        for oneHotColumn in onehot:
-            X[oneHotColumn] = onehot[oneHotColumn]
-        X.drop(columns=[column], inplace=True)
+    stringToOneHot(X, X_unknown, COLUMNS_STRING_TO_INT)
 
     scores = []
     for i in range(1):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.10)
 
-        clf = RandomForestClassifier(max_depth=10, min_samples_leaf=10)
+        clf = DecisionTreeClassifier(max_depth=5, min_samples_leaf=10)
         clf.fit(X_train, y_train)
 
         score = clf.score(X_test, y_test)
@@ -540,17 +556,20 @@ def main():
             display_labels = clf.classes_)
         disp.plot()
         plt.show()
+        util.writeResultFile(X_unknown, clf)
     avgScore = np.array(scores).mean()
     print("Score: " + str(avgScore))
 
-    export_graphviz(clf.estimators_[0], out_file='tree.dot',
+
+
+    export_graphviz(clf, out_file='tree.dot',
                     feature_names=X.columns,
-                    #class_names=iris.target_names,
+                    class_names=clf.classes_,
                     rounded=True, proportion=False,
                     precision=2, filled=True)
 
     from subprocess import call
-    call(['dot', '-Tpng', 'tree.dot', '-o', 'tree.png', '-Gdpi=600'])
+    call(['dot', '-Tpng', 'tree.dot', '-o', 'tree.png', '-Gdpi=1200'])
 
 if __name__ == '__main__':
     main()
